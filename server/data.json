@@ -1,0 +1,78 @@
+{
+  "donors": [
+    {
+      "id": "d1",
+      "name": "Aisha Khan",
+      "bloodGroup": "O-",
+      "city": "Kolkata",
+      "phone": "+91 9876543210",
+      "lastDonation": "2025-12-20"
+    },
+    {
+      "id": "d2",
+      "name": "Rohan Sen",
+      "bloodGroup": "A+",
+      "city": "Howrah",
+      "phone": "+91 9812345678",
+      "lastDonation": "2026-03-15"
+    },
+    {
+      "id": "d3",
+      "name": "Priya Das",
+      "bloodGroup": "B+",
+      "city": "Kolkata",
+      "phone": "+91 9900011122",
+      "lastDonation": "2025-11-30"
+    },
+    {
+      "id": "d4",
+      "name": "Naved Ali",
+      "bloodGroup": "AB-",
+      "city": "Durgapur",
+      "phone": "+91 9845012376",
+      "lastDonation": "2026-01-10"
+    }
+  ],
+  "inventory": [
+    {
+      "id": "i1",
+      "bloodGroup": "O-",
+      "units": 4,
+      "location": "City Blood Bank",
+      "updatedAt": "2026-04-18"
+    },
+    {
+      "id": "i2",
+      "bloodGroup": "A+",
+      "units": 11,
+      "location": "Medicare Central Lab",
+      "updatedAt": "2026-04-17"
+    },
+    {
+      "id": "i3",
+      "bloodGroup": "B+",
+      "units": 7,
+      "location": "LifeLine Hospital Storage",
+      "updatedAt": "2026-04-19"
+    },
+    {
+      "id": "i4",
+      "bloodGroup": "AB-",
+      "units": 2,
+      "location": "City Blood Bank",
+      "updatedAt": "2026-04-19"
+    }
+  ],
+  "requests": [
+    {
+      "id": "r1",
+      "patient": "Case-ER-204",
+      "bloodGroup": "AB+",
+      "unitsNeeded": 3,
+      "hospital": "Apollo Emergency Wing",
+      "city": "Kolkata",
+      "priority": "Critical",
+      "createdAt": "2026-04-19T00:00:00.000Z"
+    }
+  ]
+}
