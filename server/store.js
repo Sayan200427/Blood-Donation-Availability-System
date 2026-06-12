@@ -1,11 +1,6 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
-import { fileURLToPath } from "url";
+import mongoose from "mongoose";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const dataFilePath = path.join(__dirname, "data.json");
 const donationGapDays = 90;
 const lowStockThreshold = 5;
 const bloodGroups = ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"];
@@ -21,7 +16,49 @@ const compatibilityMap = {
   "AB+": bloodGroups
 };
 
+const donorSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    bloodGroup: { type: String, required: true, enum: bloodGroups },
+    city: { type: String, required: true },
+    phone: { type: String, required: true },
+    lastDonation: { type: String, required: true }
+  },
+  { versionKey: false }
+);
+
+const inventorySchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true },
+    bloodGroup: { type: String, required: true, unique: true, enum: bloodGroups },
+    units: { type: Number, required: true, min: 0 },
+    location: { type: String, required: true },
+    updatedAt: { type: String, required: true }
+  },
+  { versionKey: false }
+);
+
+const requestSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true },
+    patient: { type: String, required: true },
+    bloodGroup: { type: String, required: true, enum: bloodGroups },
+    unitsNeeded: { type: Number, required: true, min: 1 },
+    hospital: { type: String, required: true },
+    city: { type: String, required: true },
+    priority: { type: String, required: true, enum: ["Critical", "High", "Moderate"] },
+    createdAt: { type: String, required: true }
+  },
+  { versionKey: false }
+);
+
+const Donor = mongoose.model("Donor", donorSchema);
+const Inventory = mongoose.model("Inventory", inventorySchema);
+const BloodRequest = mongoose.model("BloodRequest", requestSchema);
+
 export async function getDashboardData() {
+  await seedDatabaseIfEmpty();
   const state = await readState();
 
   const inventory = [...state.inventory]
@@ -75,7 +112,6 @@ export async function addDonor(payload) {
   validatePayload(payload, ["name", "bloodGroup", "city", "phone", "lastDonation"]);
   assertBloodGroup(payload.bloodGroup);
 
-  const state = await readState();
   const donor = {
     id: randomUUID(),
     name: payload.name.trim(),
@@ -85,8 +121,7 @@ export async function addDonor(payload) {
     lastDonation: payload.lastDonation
   };
 
-  state.donors.unshift(donor);
-  await writeState(state);
+  await Donor.create(donor);
   return donor;
 }
 
@@ -98,8 +133,7 @@ export async function upsertInventory(payload) {
     throw new Error("Units must be a non-negative whole number.");
   }
 
-  const state = await readState();
-  const existing = state.inventory.find((item) => item.bloodGroup === payload.bloodGroup);
+  const existing = await Inventory.findOne({ bloodGroup: payload.bloodGroup }).lean();
   const record = {
     id: existing?.id || randomUUID(),
     bloodGroup: payload.bloodGroup,
@@ -108,13 +142,10 @@ export async function upsertInventory(payload) {
     updatedAt: payload.updatedAt
   };
 
-  if (existing) {
-    Object.assign(existing, record);
-  } else {
-    state.inventory.push(record);
-  }
-
-  await writeState(state);
+  await Inventory.findOneAndUpdate({ bloodGroup: payload.bloodGroup }, record, {
+    new: true,
+    upsert: true
+  });
   return record;
 }
 
@@ -131,7 +162,6 @@ export async function addRequest(payload) {
     throw new Error("Priority must be Critical, High, or Moderate.");
   }
 
-  const state = await readState();
   const request = {
     id: randomUUID(),
     patient: payload.patient.trim(),
@@ -143,26 +173,46 @@ export async function addRequest(payload) {
     createdAt: new Date().toISOString()
   };
 
-  state.requests.unshift(request);
-  await writeState(state);
+  await BloodRequest.create(request);
   return request;
 }
 
 async function readState() {
-  try {
-    const raw = await fs.readFile(dataFilePath, "utf8");
-    return JSON.parse(raw);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      await writeState(seedData());
-      return seedData();
-    }
-    throw error;
-  }
+  const [donors, inventory, requests] = await Promise.all([
+    Donor.find().sort({ _id: -1 }).lean(),
+    Inventory.find().lean(),
+    BloodRequest.find().sort({ _id: -1 }).lean()
+  ]);
+
+  return {
+    donors: donors.map(cleanMongoDocument),
+    inventory: inventory.map(cleanMongoDocument),
+    requests: requests.map(cleanMongoDocument)
+  };
 }
 
-async function writeState(state) {
-  await fs.writeFile(dataFilePath, JSON.stringify(state, null, 2));
+async function seedDatabaseIfEmpty() {
+  const [donorCount, inventoryCount, requestCount] = await Promise.all([
+    Donor.countDocuments(),
+    Inventory.countDocuments(),
+    BloodRequest.countDocuments()
+  ]);
+
+  if (donorCount || inventoryCount || requestCount) {
+    return;
+  }
+
+  const seed = seedData();
+  await Promise.all([
+    Donor.insertMany(seed.donors),
+    Inventory.insertMany(seed.inventory),
+    BloodRequest.insertMany(seed.requests)
+  ]);
+}
+
+function cleanMongoDocument(document) {
+  const { _id, ...rest } = document;
+  return rest;
 }
 
 function seedData() {

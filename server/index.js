@@ -1,11 +1,15 @@
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
+import { connectDatabase } from "./db.js";
 import {
   addDonor,
   getDashboardData,
   upsertInventory,
   addRequest
 } from "./store.js";
+
+dotenv.config();
 
 const app = express();
 const port = 4000;
@@ -49,6 +53,15 @@ app.post("/api/requests", async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Emergency Blood Donation API running on http://localhost:${port}`);
+async function startServer() {
+  await connectDatabase();
+
+  app.listen(port, () => {
+    console.log(`Emergency Blood Donation API running on http://localhost:${port}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("Failed to start server:", error.message);
+  process.exit(1);
 });

@@ -97,45 +97,80 @@ export default function App() {
   const inventory = dashboard?.inventory || [];
   const donors = dashboard?.donors || [];
   const requests = dashboard?.requests || [];
+  const lowStockCount = inventory.filter((item) => item.statusTone === "low" || item.statusTone === "critical").length;
+  const availableDonorCount = donors.filter((donor) => donor.statusTone === "ok").length;
+  const groupSummary = bloodGroups.map((group) => {
+    const match = inventory.find((item) => item.bloodGroup === group);
+    return {
+      group,
+      units: match?.units || 0,
+      tone: match?.statusTone || "empty"
+    };
+  });
 
   return (
     <div className="page-shell">
+      <nav className="topbar" aria-label="Application">
+        <div className="brand-lockup">
+          <span className="brand-mark" aria-hidden="true">B</span>
+          <p className="brand-kicker">BloodNet Ops</p>
+          <strong>Emergency Blood Control</strong>
+        </div>
+        <div className="topbar-actions">
+          <span className={`system-pill ${error ? "offline" : "online"}`}>
+            {error ? "Backend offline" : "System online"}
+          </span>
+          <button className="ghost-button" type="button" onClick={loadDashboard} disabled={loading}>
+            {loading ? "Refreshing" : "Refresh"}
+          </button>
+        </div>
+      </nav>
+
       <header className="hero">
         <div className="hero-copy">
           <p className="eyebrow">Emergency Response Dashboard</p>
           <h1>Emergency Blood Donation & Availability System</h1>
           <p className="hero-text">
-            React frontend plus Express backend for hospitals, blood banks, and emergency teams
-            to manage donor outreach and blood availability in one place.
+            One operational view for hospitals, blood banks, and response teams to track
+            compatible donors, stock levels, and active emergency requests.
           </p>
           <div className="hero-stats">
             <article>
-              <span>{stats.donors}</span>
               <p>Registered donors</p>
+              <span>{stats.donors}</span>
+              <small>{availableDonorCount} available now</small>
             </article>
             <article>
-              <span>{stats.totalUnits}</span>
               <p>Units in stock</p>
+              <span>{stats.totalUnits}</span>
+              <small>{lowStockCount} groups need review</small>
             </article>
             <article>
-              <span>{stats.activeRequests}</span>
               <p>Active emergencies</p>
+              <span>{stats.activeRequests}</span>
+              <small>{requests.length} open request records</small>
             </article>
           </div>
         </div>
-        <div className="hero-card">
-          <p className="card-label">Full-stack build</p>
-          <h2>Live dashboard driven by backend API data</h2>
-          <p>
-            The client reads and writes through Express APIs, while the server stores records in a
-            local JSON database and computes compatibility-based matches.
-          </p>
-          <ul>
-            <li>REST API for donors, inventory, and requests</li>
-            <li>Persistent local data storage</li>
-            <li>Automatic emergency matching logic</li>
+        <aside className="hero-card" aria-label="Operational readiness">
+          <div>
+            <p className="card-label">Readiness brief</p>
+            <h2>Prioritize shortage risk before it becomes critical.</h2>
+          </div>
+          <div className="availability-board" aria-label="Blood group availability">
+            {groupSummary.map((item) => (
+              <div className={`blood-chip ${item.tone}`} key={item.group}>
+                <strong>{item.group}</strong>
+                <span>{item.units}u</span>
+              </div>
+            ))}
+          </div>
+          <ul className="readiness-list">
+            <li>Low stock is surfaced by blood group</li>
+            <li>Requests stay paired with donor matches</li>
+            <li>Records are optimized for shift handover</li>
           </ul>
-        </div>
+        </aside>
       </header>
 
       {error ? <div className="flash flash-error">{error}</div> : null}
@@ -366,7 +401,11 @@ export default function App() {
           <div className="card-grid">
             {inventory.length ? (
               inventory.map((item) => (
-                <article className="inventory-card" key={item.id}>
+                <article
+                  className={`inventory-card ${item.statusTone}`}
+                  key={item.id}
+                  style={{ "--stock-level": `${Math.min(Number(item.units) || 0, 20) * 5}%` }}
+                >
                   <div className="inventory-card__top">
                     <h3>{item.bloodGroup}</h3>
                     <span className={`badge ${item.statusTone}`}>{item.statusLabel}</span>
@@ -376,6 +415,9 @@ export default function App() {
                   </p>
                   <p className="inventory-location">{item.location}</p>
                   <p className="inventory-date">Updated {item.updatedAtFormatted}</p>
+                  <div className="stock-meter" aria-hidden="true">
+                    <span />
+                  </div>
                 </article>
               ))
             ) : (
@@ -434,11 +476,11 @@ export default function App() {
                       <h3>{request.patient}</h3>
                     </div>
                     <span className={`badge ${request.priorityTone}`}>
-                      {request.bloodGroup} • {request.unitsNeeded} unit{request.unitsNeeded === 1 ? "" : "s"}
+                      {request.bloodGroup} - {request.unitsNeeded} unit{request.unitsNeeded === 1 ? "" : "s"}
                     </span>
                   </div>
                   <p className="request-meta">
-                    {request.hospital}, {request.city} • Raised {request.createdAtFormatted}
+                    {request.hospital}, {request.city} - Raised {request.createdAtFormatted}
                   </p>
                   <div className="request-split">
                     <div>
@@ -451,7 +493,7 @@ export default function App() {
                         <ul className="match-list">
                           {request.matches.map((match) => (
                             <li key={match.id}>
-                              {match.name} ({match.bloodGroup}) • {match.city} • {match.phone}
+                              {match.name} ({match.bloodGroup}) - {match.city} - {match.phone}
                             </li>
                           ))}
                         </ul>

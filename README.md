@@ -6,7 +6,7 @@ A full-stack React and Express project for tracking blood donors, blood bank inv
 
 - React with Vite for the frontend
 - Express for the backend API
-- Local JSON file storage for persistence
+- MongoDB Atlas with Mongoose for persistence
 - Compatibility-based donor and stock matching on the server
 
 ## Features
@@ -15,14 +15,14 @@ A full-stack React and Express project for tracking blood donors, blood bank inv
 - Update blood inventory by blood group and storage location
 - Create emergency requests with hospital, city, urgency, and units needed
 - View automatic donor matches and compatible inventory coverage
-- Persist data in `server/data.json`
+- Persist data in MongoDB
 
 ## Project Structure
 
 - `src/` - React frontend
 - `server/index.js` - Express API server
-- `server/store.js` - persistence and matching logic
-- `server/data.json` - local JSON datastore
+- `server/db.js` - MongoDB connection helper
+- `server/store.js` - Mongoose models, persistence, and matching logic
 
 ## Run
 
@@ -32,13 +32,21 @@ A full-stack React and Express project for tracking blood donors, blood bank inv
 npm install
 ```
 
-2. Start frontend and backend together:
+2. Create `.env` from `.env.example` and replace the MongoDB password placeholder:
+
+```bash
+MONGO_URI=mongodb+srv://web_dev:your_real_password@cluster0.c9rnwol.mongodb.net/bloodDonationDB?retryWrites=true&w=majority&appName=Cluster0
+```
+
+If your password contains special characters such as `@`, `#`, `/`, or `?`, URL-encode it before putting it in the URI.
+
+3. Start frontend and backend together:
 
 ```bash
 npm run dev
 ```
 
-3. Open:
+4. Open:
 
 `http://localhost:5173`
 
