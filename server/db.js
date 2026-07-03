@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+let connectionPromise;
+
 export async function connectDatabase() {
   const mongoUri = process.env.MONGO_URI;
 
@@ -11,6 +13,11 @@ export async function connectDatabase() {
     throw new Error("Replace the MongoDB password placeholder in .env before starting the server.");
   }
 
-  await mongoose.connect(mongoUri);
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+
+  connectionPromise ||= mongoose.connect(mongoUri);
+  await connectionPromise;
   console.log("MongoDB connected");
 }
